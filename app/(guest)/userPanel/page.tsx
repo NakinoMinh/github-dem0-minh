@@ -7,20 +7,59 @@ import { Menu, X } from "lucide-react";
 export default function userPanel() {
   const [isOpen, setIsOpen] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
-
+  const [search, setSearch] = useState("");
   const navLinks = [
     { label: "Trang Chủ", href: "/home" },
     { label: "Bác Sĩ", href: "/doctor" },
     { label: "Đặt Lịch", href: "/booking" },
     { label: "Liên Hệ", href: "/contact" },
   ];
+  const [filteredNavLinks, setFilteredNavLinks] = useState(navLinks);
 
   const profileMenuItems = [
-    { label: "Chỉnh sửa hồ sơ", id: "edit-profile" },
-    { label: "Kết quả xét nghiệm (CD4, tải lượng HIV, ARV)", id: "lab-results" },
-    { label: "Lịch sử khám bệnh", id: "medical-history" },
-    { label: "Hệ thống nhắc uống thuốc, tái khám", id: "reminder-system" },
+    { id: "edit-profile", label: "Chỉnh sửa hồ sơ" },
+    { id: "lab-results", label: "Kết quả xét nghiệm" },
+    { id: "medical-history", label: "Lịch sử khám bệnh" },
+    { id: "arv", label: "ARV" },
+    { id: "reminder-system", label: "Hệ thống nhắc nhở" },
   ];
+
+  // Xử lý tìm kiếm nav
+  function handleSearchNav(e: React.FormEvent) {
+    e.preventDefault();
+    if (!search.trim()) {
+      setFilteredNavLinks(navLinks);
+      return;
+    }
+    setFilteredNavLinks(
+      navLinks.filter((link) =>
+        link.label.toLowerCase().includes(search.trim().toLowerCase())
+      )
+    );
+  }
+
+  function handleProfileMenuClick(id: string) {
+    switch (id) {
+      case "edit-profile":
+        window.location.href = "/userPanel/edit";
+        break;
+      case "lab-results":
+        window.location.href = "/userPanel/lab-results";
+        break;
+      case "medical-history":
+        window.location.href = "/userPanel/medical-history";
+        break;
+      case "arv":
+        window.location.href = "/userPanel/arv";
+        break;
+      case "reminder-system":
+        window.location.href = "/profile/reminders";
+        break;
+      default:
+        break;
+    }
+    setShowProfileMenu(false);
+  }
 
   return (
     <header className="bg-white border-b border-gray-200 shadow-sm fixed w-full top-0 z-50">
@@ -35,8 +74,25 @@ export default function userPanel() {
 
         {/* Desktop Nav */}
         <div className="hidden md:flex items-center space-x-8">
-          <nav className="flex space-x-8">
-            {navLinks.map(({ href, label }) => (
+          {/* Search bar on the left */}
+          <form
+            className="flex items-center border rounded px-2 py-1 bg-gray-50 mr-4"
+            onSubmit={handleSearchNav}
+            style={{ minWidth: 200 }}
+          >
+            <input
+              type="text"
+              placeholder="Tìm kiếm..."
+              className="outline-none bg-transparent text-sm px-2"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+            <button type="submit" className="text-[#27509f] font-bold px-2">
+              🔍
+            </button>
+          </form>
+          <nav className="flex space-x-8 items-center">
+            {filteredNavLinks.map(({ href, label }) => (
               <Link
                 key={href}
                 href={href}
@@ -69,6 +125,7 @@ export default function userPanel() {
                         href="#"
                         data-content-id={item.id}
                         className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded"
+                        onClick={() => handleProfileMenuClick(item.id)}
                       >
                         {item.label}
                       </a>
@@ -100,7 +157,7 @@ export default function userPanel() {
       {/* Mobile Menu */}
       {isOpen && (
         <div className="md:hidden bg-white border-t border-gray-200 px-6 pb-6 space-y-4">
-          {navLinks.map(({ href, label }) => (
+          {filteredNavLinks.map(({ href, label }) => (
             <Link
               key={href}
               href={href}
@@ -128,6 +185,7 @@ export default function userPanel() {
                     href="#"
                     data-content-id={item.id}
                     className="block text-[#27509f] font-roboto text-base font-medium no-underline hover:underline"
+                    onClick={() => handleProfileMenuClick(item.id)}
                   >
                     {item.label}
                   </a>
