@@ -1,31 +1,95 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Link from "next/link";
-import { useState } from "react";
 import { Menu, X } from "lucide-react";
 
+const BASE_URL = "http://localhost:8080";
+
 export default function UserProfileView() {
-  const [isOpen, setIsOpen] = useState(false);
-  const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [successMsg, setSuccessMsg] = useState("");
   const [form, setForm] = useState({
-    name: "Nguyễn Văn A",
-    email: "a@gmail.com",
-    phone: "0901234567",
-    address: "Hà Nội",
-    dob: "1990-01-01",
+    name: "",
+    email: "",
+    phone: "",
+    address: "",
+    dob: "",
     gender: "male",
   });
-  const [errors, setErrors] = useState<any>({});
+  const [errors, setErrors] = useState<{ name?: string; email?: string; phone?: string; dob?: string }>(
+    {}
+  );
+  const [isOpen, setIsOpen] = useState(false);
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
 
-  const user = form;
+  const userId = 1; // Replace with actual authenticated user ID
+
+  useEffect(() => {
+    // Fetch user profile on mount
+    async function fetchUser() {
+      try {
+        const response = await fetch(`${BASE_URL}/api/users/${userId}`);
+        if (!response.ok) {
+          throw new Error("Không thể tải hồ sơ người dùng.");
+        }
+        const data = await response.json();
+        setForm({
+          name: data.name || "",
+          email: data.email || "",
+          phone: data.phone || "",
+          address: data.address || "",
+          dob: data.dob || "",
+          gender: data.gender || "",
+        });
+      } catch (error) {
+        const errMsg = error instanceof Error ? error.message : "Có lỗi xảy ra";
+        alert(errMsg);
+      }
+    }
+    fetchUser();
+  }, [userId]);
+
+  // Sửa lại validateForm để có type cho newErrors
+  const validateForm = () => {
+    const newErrors: { name?: string; email?: string; phone?: string; dob?: string } = {};
+    if (!form.name.trim()) newErrors.name = "Vui lòng nhập họ tên";
+    if (!form.email.trim()) newErrors.email = "Vui lòng nhập email";
+    if (!form.phone.trim()) newErrors.phone = "Vui lòng nhập số điện thoại";
+    if (!form.dob.trim()) newErrors.dob = "Vui lòng nhập ngày sinh";
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  // Sửa lại handleSubmit và catch error
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!validateForm()) return;
+    try {
+      const response = await fetch(`${BASE_URL}/api/users/${userId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
+      if (!response.ok) {
+        throw new Error("Cập nhật hồ sơ thất bại. Vui lòng thử lại.");
+      }
+      setSuccessMsg("Cập nhật hồ sơ thành công!");
+      setIsEditing(false);
+      setTimeout(() => setSuccessMsg(""), 3000);
+    } catch (error) {
+      const errMsg = error instanceof Error ? error.message : "Có lỗi xảy ra";
+      alert(errMsg);
+    }
+  };
+
   const navLinks = [
-    { label: "Trang Chủ", href: "/home" },
-    { label: "Bác Sĩ", href: "/doctor" },
-    { label: "Đặt Lịch", href: "/booking" },
-    { label: "Liên Hệ", href: "/contact" },
+    { href: "/home", label: "Trang chủ" },
+    { href: "/about", label: "Giới thiệu" },
+    { href: "/services", label: "Dịch vụ" },
+    { href: "/contact", label: "Liên hệ" },
   ];
+
   const profileMenuItems = [
     { id: "edit-profile", label: "Chỉnh sửa hồ sơ" },
     { id: "lab-results", label: "Kết quả xét nghiệm" },
@@ -33,10 +97,11 @@ export default function UserProfileView() {
     { id: "arv", label: "ARV" },
     { id: "reminder-system", label: "Hệ thống nhắc nhở" },
   ];
-  function handleProfileMenuClick(id: string) {
+
+  const handleProfileMenuClick = (id: string) => {
     switch (id) {
       case "edit-profile":
-        window.location.href = "/userPanel/edit";
+        setIsEditing(true);
         break;
       case "lab-results":
         window.location.href = "/userPanel/lab-results";
@@ -54,41 +119,30 @@ export default function UserProfileView() {
         break;
     }
     setShowProfileMenu(false);
-  }
+  };
 
   return (
     <>
       <header className="bg-white border-b border-gray-200 shadow-sm fixed w-full top-0 z-50">
         <div className="w-full px-8 py-6 flex justify-between items-center">
-          {/* Logo */}
           <Link href="/home" className="flex items-center space-x-3">
             <img src="/logo.jpg" alt="Logo" className="w-[100px] h-auto" />
             <h1 className="font-roboto text-[20px] text-[#879FC5EB] m-0">
               HIV Treatment and Medical
             </h1>
           </Link>
-
-          {/* Desktop Nav */}
           <div className="hidden md:flex items-center space-x-8">
-            {/* Search bar on the left */}
             <form
               className="flex items-center border rounded px-2 py-1 bg-gray-50 mr-4"
-              onSubmit={(e) => {
-                e.preventDefault();
-              }}
+              onSubmit={(e) => e.preventDefault()}
               style={{ minWidth: 200 }}
             >
               <input
                 type="text"
                 placeholder="Tìm kiếm..."
                 className="outline-none bg-transparent text-sm px-2"
-                disabled
               />
-              <button
-                type="submit"
-                className="text-[#27509f] font-bold px-2"
-                disabled
-              >
+              <button type="submit" className="text-[#27509f] font-bold px-2">
                 🔍
               </button>
             </form>
@@ -103,8 +157,6 @@ export default function UserProfileView() {
                 </Link>
               ))}
             </nav>
-
-            {/* Avatar + Profile Menu */}
             <div className="relative">
               <button
                 onClick={() => setShowProfileMenu(!showProfileMenu)}
@@ -116,7 +168,6 @@ export default function UserProfileView() {
                   className="w-full h-full object-cover"
                 />
               </button>
-
               {showProfileMenu && (
                 <div className="absolute right-0 mt-2 w-72 bg-white border rounded shadow-lg z-50 p-2">
                   <ul className="profile-menu space-y-1">
@@ -144,8 +195,6 @@ export default function UserProfileView() {
               )}
             </div>
           </div>
-
-          {/* Mobile Toggle */}
           <button
             className="md:hidden text-gray-700"
             onClick={() => setIsOpen(!isOpen)}
@@ -154,8 +203,6 @@ export default function UserProfileView() {
             {isOpen ? <X size={24} /> : <Menu size={24} />}
           </button>
         </div>
-
-        {/* Mobile Menu */}
         {isOpen && (
           <div className="md:hidden bg-white border-t border-gray-200 px-6 pb-6 space-y-4">
             {navLinks.map(({ href, label }) => (
@@ -168,8 +215,6 @@ export default function UserProfileView() {
                 {label}
               </Link>
             ))}
-
-            {/* Avatar Mobile Menu */}
             <div className="pt-4 border-t border-gray-100">
               <div className="flex items-center space-x-3 mb-3">
                 <img
@@ -205,112 +250,132 @@ export default function UserProfileView() {
         )}
       </header>
 
-      <div className="max-w-2xl mx-auto mt-32 bg-white p-8 rounded shadow">
-        <h2 className="text-2xl font-bold mb-6 text-[#27509f] text-center">
-          Hồ sơ cá nhân
-        </h2>
+      {/* Main Content */}
+      <main className="max-w-[1200px] mx-auto mt-20 p-10 bg-white rounded-3xl shadow-md">
+        <h2 className="text-4xl font-bold mb-6 text-[#27509f] text-center">Hồ sơ cá nhân</h2>
         {successMsg && (
-          <div className="mb-4 text-green-600 text-center font-medium">
+          <p className="mb-8 text-green-600 font-semibold text-center">
             {successMsg}
-          </div>
+          </p>
         )}
+
         {isEditing ? (
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              // Validate
-              const newErrors: any = {};
-              if (!form.name) newErrors.name = "Vui lòng nhập họ tên";
-              if (!form.email) newErrors.email = "Vui lòng nhập email";
-              if (!form.phone) newErrors.phone = "Vui lòng nhập số điện thoại";
-              if (!form.dob) newErrors.dob = "Vui lòng nhập ngày sinh";
-              setErrors(newErrors);
-              if (Object.keys(newErrors).length > 0) return;
-              setIsEditing(false);
-              setSuccessMsg("Cập nhật hồ sơ thành công!");
-              setTimeout(() => setSuccessMsg(""), 2500);
-            }}
-            className="space-y-4"
-          >
-            <div className="flex items-center mb-2">
-              <label className="w-1/3 font-medium">Họ và tên</label>
+          <form onSubmit={handleSubmit} className="max-w-3xl mx-auto space-y-8">
+            <div>
+              <label
+                htmlFor="name"
+                className="block mb-2 text-gray-700 font-semibold"
+              >
+                Họ và tên
+              </label>
               <input
-                className="flex-1 border rounded px-3 py-2"
+                id="name"
+                type="text"
                 value={form.name}
-                onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+                onChange={(e) => setForm({ ...form, name: e.target.value })}
+                className="w-full rounded-2xl border border-gray-300 px-4 py-3 text-lg outline-none focus:ring-2 focus:ring-blue-400 transition"
               />
+              {errors.name && (
+                <p className="mt-1 text-red-600 font-medium">{errors.name}</p>
+              )}
             </div>
-            {errors.name && (
-              <div className="text-red-500 text-sm mb-2 ml-1/3">
-                {errors.name}
-              </div>
-            )}
-            <div className="flex items-center mb-2">
-              <label className="w-1/3 font-medium">Email</label>
+
+            <div>
+              <label
+                htmlFor="email"
+                className="block mb-2 text-gray-700 font-semibold"
+              >
+                Email
+              </label>
               <input
-                className="flex-1 border rounded px-3 py-2"
-                value={form.email}
-                onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
+                id="email"
                 type="email"
+                value={form.email}
+                onChange={(e) => setForm({ ...form, email: e.target.value })}
+                className="w-full rounded-2xl border border-gray-300 px-4 py-3 text-lg outline-none focus:ring-2 focus:ring-blue-400 transition"
               />
+              {errors.email && (
+                <p className="mt-1 text-red-600 font-medium">{errors.email}</p>
+              )}
             </div>
-            {errors.email && (
-              <div className="text-red-500 text-sm mb-2 ml-1/3">
-                {errors.email}
-              </div>
-            )}
-            <div className="flex items-center mb-2">
-              <label className="w-1/3 font-medium">Số điện thoại</label>
+
+            <div>
+              <label
+                htmlFor="phone"
+                className="block mb-2 text-gray-700 font-semibold"
+              >
+                Số điện thoại
+              </label>
               <input
-                className="flex-1 border rounded px-3 py-2"
-                value={form.phone}
-                onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
+                id="phone"
                 type="tel"
+                value={form.phone}
+                onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                className="w-full rounded-2xl border border-gray-300 px-4 py-3 text-lg outline-none focus:ring-2 focus:ring-blue-400 transition"
               />
+              {errors.phone && (
+                <p className="mt-1 text-red-600 font-medium">{errors.phone}</p>
+              )}
             </div>
-            {errors.phone && (
-              <div className="text-red-500 text-sm mb-2 ml-1/3">
-                {errors.phone}
-              </div>
-            )}
-            <div className="flex items-center mb-2">
-              <label className="w-1/3 font-medium">Địa chỉ</label>
+
+            <div>
+              <label
+                htmlFor="address"
+                className="block mb-2 text-gray-700 font-semibold"
+              >
+                Địa chỉ
+              </label>
               <input
-                className="flex-1 border rounded px-3 py-2"
+                id="address"
+                type="text"
                 value={form.address}
-                onChange={(e) => setForm((f) => ({ ...f, address: e.target.value }))}
+                onChange={(e) => setForm({ ...form, address: e.target.value })}
+                className="w-full rounded-2xl border border-gray-300 px-4 py-3 text-lg outline-none focus:ring-2 focus:ring-blue-400 transition"
               />
             </div>
-            <div className="flex items-center mb-2">
-              <label className="w-1/3 font-medium">Ngày sinh</label>
+
+            <div>
+              <label
+                htmlFor="dob"
+                className="block mb-2 text-gray-700 font-semibold"
+              >
+                Ngày sinh
+              </label>
               <input
-                className="flex-1 border rounded px-3 py-2"
-                value={form.dob}
-                onChange={(e) => setForm((f) => ({ ...f, dob: e.target.value }))}
+                id="dob"
                 type="date"
+                value={form.dob}
+                onChange={(e) => setForm({ ...form, dob: e.target.value })}
+                className="w-full rounded-2xl border border-gray-300 px-4 py-3 text-lg outline-none focus:ring-2 focus:ring-blue-400 transition"
               />
+              {errors.dob && (
+                <p className="mt-1 text-red-600 font-medium">{errors.dob}</p>
+              )}
             </div>
-            {errors.dob && (
-              <div className="text-red-500 text-sm mb-2 ml-1/3">
-                {errors.dob}
-              </div>
-            )}
-            <div className="flex items-center mb-2">
-              <label className="w-1/3 font-medium">Giới tính</label>
+
+            <div>
+              <label
+                htmlFor="gender"
+                className="block mb-2 text-gray-700 font-semibold"
+              >
+                Giới tính
+              </label>
               <select
-                className="flex-1 border rounded px-3 py-2"
+                id="gender"
                 value={form.gender}
-                onChange={(e) => setForm((f) => ({ ...f, gender: e.target.value }))}
+                onChange={(e) => setForm({ ...form, gender: e.target.value })}
+                className="w-full rounded-2xl border border-gray-300 px-4 py-3 text-lg outline-none focus:ring-2 focus:ring-blue-400 transition"
               >
                 <option value="male">Nam</option>
                 <option value="female">Nữ</option>
                 <option value="other">Khác</option>
               </select>
             </div>
-            <div className="flex justify-end space-x-2 mt-6">
+
+            <div className="flex justify-end space-x-6 mt-12">
               <button
                 type="button"
-                className="px-4 py-2 rounded bg-gray-200 text-gray-700"
+                className="px-8 py-3 rounded-2xl bg-gray-200 text-gray-700 font-semibold hover:bg-gray-300 transition"
                 onClick={() => {
                   setIsEditing(false);
                   setErrors({});
@@ -320,61 +385,56 @@ export default function UserProfileView() {
               </button>
               <button
                 type="submit"
-                className="px-4 py-2 rounded bg-[#27509f] text-white font-semibold"
+                className="px-8 py-3 rounded-2xl bg-blue-600 text-white font-semibold hover:bg-blue-700 transition"
               >
                 Lưu
               </button>
             </div>
           </form>
         ) : (
-          <>
-            <table className="w-full border text-base">
-              <tbody>
-                <tr>
-                  <td className="py-2 px-3 border font-medium w-1/3">Họ và tên</td>
-                  <td className="py-2 px-3 border">{user.name}</td>
-                </tr>
-                <tr>
-                  <td className="py-2 px-3 border font-medium">Email</td>
-                  <td className="py-2 px-3 border">{user.email}</td>
-                </tr>
-                <tr>
-                  <td className="py-2 px-3 border font-medium">Số điện thoại</td>
-                  <td className="py-2 px-3 border">{user.phone}</td>
-                </tr>
-                <tr>
-                  <td className="py-2 px-3 border font-medium">Địa chỉ</td>
-                  <td className="py-2 px-3 border">{user.address}</td>
-                </tr>
-                <tr>
-                  <td className="py-2 px-3 border font-medium">Ngày sinh</td>
-                  <td className="py-2 px-3 border">{user.dob}</td>
-                </tr>
-                <tr>
-                  <td className="py-2 px-3 border font-medium">Giới tính</td>
-                  <td className="py-2 px-3 border">
-                    {user.gender === "male"
-                      ? "Nam"
-                      : user.gender === "female"
-                      ? "Nữ"
-                      : user.gender === "other"
-                      ? "Khác"
-                      : ""}
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-            <div className="flex justify-end mt-6">
+          <div className="max-w-3xl mx-auto rounded-3xl bg-white shadow-md p-12 text-gray-600 text-lg space-y-6">
+            <div className="flex justify-between">
+              <span className="font-semibold text-gray-900 w-1/3">Họ và tên</span>
+              <span className="w-2/3">{form.name}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="font-semibold text-gray-900 w-1/3">Email</span>
+              <span className="w-2/3">{form.email}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="font-semibold text-gray-900 w-1/3">Số điện thoại</span>
+              <span className="w-2/3">{form.phone}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="font-semibold text-gray-900 w-1/3">Địa chỉ</span>
+              <span className="w-2/3">{form.address}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="font-semibold text-gray-900 w-1/3">Ngày sinh</span>
+              <span className="w-2/3">{form.dob}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="font-semibold text-gray-900 w-1/3">Giới tính</span>
+              <span className="w-2/3">
+                {form.gender === "male"
+                  ? "Nam"
+                  : form.gender === "female"
+                  ? "Nữ"
+                  : "Khác"}
+              </span>
+            </div>
+            <div className="flex justify-end mt-12">
               <button
-                className="px-4 py-2 rounded bg-[#27509f] text-white font-semibold"
+                className="px-10 py-3 rounded-2xl bg-blue-600 text-white font-semibold hover:bg-blue-700 transition"
                 onClick={() => setIsEditing(true)}
               >
                 Chỉnh sửa
               </button>
             </div>
-          </>
+          </div>
         )}
-      </div>
+      </main>
     </>
   );
 }
+

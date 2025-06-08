@@ -42,7 +42,6 @@ export default function MedicalHistory() {
     { id: "edit-profile", label: "Chỉnh sửa hồ sơ" },
     { id: "lab-results", label: "Kết quả xét nghiệm" },
     { id: "medical-history", label: "Lịch sử khám bệnh" },
-    { id: "arv", label: "ARV" },
     { id: "reminder-system", label: "Hệ thống nhắc nhở" },
   ];
   function handleProfileMenuClick(id: string) {
@@ -55,9 +54,6 @@ export default function MedicalHistory() {
         break;
       case "medical-history":
         window.location.href = "/userPanel/medical-history";
-        break;
-      case "arv":
-        window.location.href = "/userPanel/arv";
         break;
       case "reminder-system":
         window.location.href = "/profile/reminders";
